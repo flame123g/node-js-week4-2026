@@ -20,7 +20,13 @@ const router = express.Router();
 // ───────────────────────────────────────────────────────────
 // TODO 任務二：POST /register
 // ───────────────────────────────────────────────────────────
-
+async function handler(password){
+    //產生salt
+    const salt=await bcrypt.genSalt(10);
+    //hash 雜湊
+    const hashedPassword=await bcrypt.hash(password,salt);
+    return hashedPassword;
+};
 // POST /register
 // - 輸入：body = { email, password }
 // - 輸出：201 + { status: 'success', message: '註冊成功' }，或 400 + { status: 'false', message: '...' }
@@ -32,7 +38,28 @@ const router = express.Router();
 /* 作答區
 router.METHOD('PATH', async (req, res) => { ... });
 */
-
+router.post('/register', async (req, res) => {
+    try{
+        const {email, password }=req.body;
+        //email、password 缺少任何一個欄位
+        if(!email || !password){
+            return res.status(400).json({status:"false",message:"錯誤訊息"});
+        };
+        const emailExist=users.find(user=>user.email===email);
+        //email 已存在
+        if(emailExist){
+            return res.status(400).json({status:"false",message:"錯誤訊息"});
+        };
+    
+        const hashedPassword=await handler(password);
+        const newUser={id:users.length+1,email:email,password:hashedPassword};
+        users.push(newUser);
+    
+        return res.status(201).json({status:"success",message:"註冊成功"});
+    }catch(error){
+        return res.status(400).json({status:"false",message:"錯誤訊息"});
+    };
+});
 // ───────────────────────────────────────────────────────────
 // TODO 任務三：POST /login
 // ───────────────────────────────────────────────────────────
@@ -49,6 +76,28 @@ router.METHOD('PATH', async (req, res) => { ... });
 /* 作答區
 router.METHOD('PATH', async (req, res) => { ... });
 */
+router.post('/login', async (req, res) => {
+    try{
+        const {email, password}=req.body;
+        const existUser=users.find(user=>user.email===email);
+        if(!existUser){
+            return res.status(401).json({status:"error",message:"帳號或密碼錯誤"});
+        };
+        const isMatch=await bcrypt.compare(password,existUser.password);
+        if(!isMatch){
+            return res.status(401).json({status:"error",message:"帳號或密碼錯誤"});
+        };
+        //jwt.sign 簽發 Token
+        const token=jwt.sign(
+            {id:existUser.id,email:existUser.email},
+            process.env.JWT_SECRET,
+            {expiresIn:'30d'}
+        );
+        return res.status(200).json({status:"success",token});
+    }catch(error){
+        return res.status(400).json({status:"false",message:"錯誤訊息"});
+    };
+});
 
 // ───────────────────────────────────────────────────────────
 // TODO 任務四：GET /me（受保護）
@@ -60,5 +109,12 @@ router.METHOD('PATH', async (req, res) => { ... });
 /* 作答區
 router.METHOD('PATH', middleware, (req, res) => { ... });
 */
-
+router.get('/me', verifyToken, (req, res) => {
+    const me=users.find(user=>user.id===req.user.id);
+    if(!me){
+        return res.status(401).json({ status: 'false', message: "Token 無效或已過期" });
+    }else{
+        return res.status(200).json({ status: 'success', user: me });
+    };
+ });
 module.exports = router;
