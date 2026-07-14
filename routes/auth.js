@@ -38,6 +38,7 @@ async function handler(password){
 /* 作答區
 router.METHOD('PATH', async (req, res) => { ... });
 */
+//在 POST /register中使用 users.length + 1 來指派新使用者的 id。但前面的程式已經定義 let nextId = initialUsers.length + 1;，建議改為使用已宣告的 nextId 變數，並進行累加
 router.post('/register', async (req, res) => {
     try{
         const {email, password }=req.body;
@@ -52,12 +53,13 @@ router.post('/register', async (req, res) => {
         };
     
         const hashedPassword=await handler(password);
-        const newUser={id:users.length+1,email:email,password:hashedPassword};
+        const newUser={id:nextId++,email:email,password:hashedPassword};
         users.push(newUser);
-    
+
         return res.status(201).json({status:"success",message:"註冊成功"});
     }catch(error){
-        return res.status(400).json({status:"false",message:"錯誤訊息"});
+    //POST /register 與 POST /login 的 catch 目前皆回傳 400，但非預期錯誤（例如 bcrypt、JWT 發生錯誤）不一定是使用者輸入問題，建議改回傳 500，以區分用戶端錯誤與伺服器錯誤
+        return res.status(500).json({status:"false",message:"錯誤訊息"});
     };
 });
 // ───────────────────────────────────────────────────────────
@@ -76,16 +78,17 @@ router.post('/register', async (req, res) => {
 /* 作答區
 router.METHOD('PATH', async (req, res) => { ... });
 */
+//POST /login 驗證失敗時回傳的 status 與題目規格不一致，規格要求失敗時回傳 { status: 'false', message: '帳號或密碼錯誤' }，目前使用 "error"，應統一修改為 "false"，避免前後端判斷格式不一致
 router.post('/login', async (req, res) => {
     try{
         const {email, password}=req.body;
         const existUser=users.find(user=>user.email===email);
         if(!existUser){
-            return res.status(401).json({status:"error",message:"帳號或密碼錯誤"});
+            return res.status(401).json({status:"false",message:"帳號或密碼錯誤"});
         };
         const isMatch=await bcrypt.compare(password,existUser.password);
         if(!isMatch){
-            return res.status(401).json({status:"error",message:"帳號或密碼錯誤"});
+            return res.status(401).json({status:"false",message:"帳號或密碼錯誤"});
         };
         //jwt.sign 簽發 Token
         const token=jwt.sign(
@@ -95,7 +98,8 @@ router.post('/login', async (req, res) => {
         );
         return res.status(200).json({status:"success",token});
     }catch(error){
-        return res.status(400).json({status:"false",message:"錯誤訊息"});
+    //POST /register 與 POST /login 的 catch 目前皆回傳 400，但非預期錯誤（例如 bcrypt、JWT 發生錯誤）不一定是使用者輸入問題，建議改回傳 500，以區分用戶端錯誤與伺服器錯誤
+        return res.status(500).json({status:"false",message:"錯誤訊息"});
     };
 });
 
@@ -109,12 +113,13 @@ router.post('/login', async (req, res) => {
 /* 作答區
 router.METHOD('PATH', middleware, (req, res) => { ... });
 */
+//GET /auth/me 目前直接回傳包含 password 欄位的使用者資料，可能造成敏感資訊暴露，建議移除 password 欄位後再回傳，或直接回傳 JWT 驗證後的 req.user 資料
 router.get('/me', verifyToken, (req, res) => {
     const me=users.find(user=>user.id===req.user.id);
     if(!me){
         return res.status(401).json({ status: 'false', message: "Token 無效或已過期" });
     }else{
-        return res.status(200).json({ status: 'success', user: me });
+        return res.status(200).json({ status: 'success', user: req.user });
     };
  });
 module.exports = router;

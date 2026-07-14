@@ -28,8 +28,12 @@ app.use("/auth",authRouter);
 app.use((req,res)=>{
     res.status(404).json({ status: 'error', message: "無此路由資訊" });
 });
+//目前在全域錯誤處理中，err 屬性寫死了 "SyntaxError" 。如果系統發生其他類型的錯誤，該守門員仍會回傳 SyntaxError，這與作業需求說明的「err：錯誤的類別名稱（例如 'SyntaxError'）」不符，建議改為動態取得錯誤的名稱與訊息
 app.use((err,req,res,next)=>{
-    res.status(500).json({err:"SyntaxError",message:err.message});
+    res.status(500).json({
+        err:err.name || "SyntaxError",
+        message:err.message
+    });
 });
 
 module.exports = app;
