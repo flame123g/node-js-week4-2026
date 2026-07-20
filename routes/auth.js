@@ -59,7 +59,8 @@ router.post('/register', async (req, res) => {
         return res.status(201).json({status:"success",message:"註冊成功"});
     }catch(error){
     //POST /register 與 POST /login 的 catch 目前皆回傳 400，但非預期錯誤（例如 bcrypt、JWT 發生錯誤）不一定是使用者輸入問題，建議改回傳 500，以區分用戶端錯誤與伺服器錯誤
-        return res.status(500).json({status:"false",message:"錯誤訊息"});
+    //POST /register 與 POST /login 的錯誤訊息目前皆使用「錯誤訊息」，建議依據情況回傳對應訊息
+        return res.status(500).json({status:"false",message:"伺服器端發生錯誤"});
     };
 });
 // ───────────────────────────────────────────────────────────
@@ -99,7 +100,8 @@ router.post('/login', async (req, res) => {
         return res.status(200).json({status:"success",token});
     }catch(error){
     //POST /register 與 POST /login 的 catch 目前皆回傳 400，但非預期錯誤（例如 bcrypt、JWT 發生錯誤）不一定是使用者輸入問題，建議改回傳 500，以區分用戶端錯誤與伺服器錯誤
-        return res.status(500).json({status:"false",message:"錯誤訊息"});
+    //POST /register 與 POST /login 的錯誤訊息目前皆使用「錯誤訊息」，建議依據情況回傳對應訊息
+        return res.status(500).json({status:"false",message:"伺服器端發生錯誤"});
     };
 });
 
